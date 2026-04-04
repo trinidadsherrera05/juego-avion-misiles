@@ -70,10 +70,10 @@
     <div id="gameOver">
         GAME OVER<br>
         <span style="font-size:36px">Puntaje final: <span id="finalScore">0</span></span><br><br>
-        Trinidad, ¿quiere  jugar de nuevo?
+        Toca la pantalla o presiona R para jugar de nuevo
     </div>
 
-    <!-- Botón de disparo táctil -->
+    <!-- Botón de disparo -->
     <div id="shootBtn" class="touch-btn" style="bottom: 40px; right: 30px;">🔫</div>
 
     <script>
@@ -91,8 +91,7 @@
         let gameOver = false;
         let difficulty = 1;
 
-        // Jugador
-        const player = { x: 370, y: 480, width: 60, height: 50, speed: 6.5 };
+        const player = { x: 370, y: 480, width: 60, height: 50, speed: 7 };
 
         let bullets = [];
         let missiles = [];
@@ -100,15 +99,14 @@
         let explosions = [];
         let keys = {};
 
-        // Controles táctiles
+        // Joystick táctil
         let isTouching = false;
         let touchX = 0, touchY = 0;
         let joystickActive = false;
-        const joystickX = 130;
-        const joystickY = 480;
-        const joystickRadius = 65;
+        const joystickX = 140;
+        const joystickY = 470;
+        const joystickRadius = 75;   // Más grande y fácil de usar
 
-        // Audio
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
         function playSound(freq, duration, type = 'sine', volume = 0.3) {
@@ -125,7 +123,7 @@
         }
 
         // ====================== CONTROLES ======================
-        // Teclado (PC)
+        // Teclado
         window.addEventListener("keydown", e => {
             keys[e.key] = true;
             if (e.key === " " && !gameOver) shoot();
@@ -145,14 +143,17 @@
 
         canvas.addEventListener("touchstart", e => {
             e.preventDefault();
-            if (gameOver) { resetGame(); return; }
-            
+            if (gameOver) {
+                resetGame();
+                return;
+            }
             const pos = getTouchPos(e);
             touchX = pos.x;
             touchY = pos.y;
             isTouching = true;
 
-            if (Math.hypot(pos.x - joystickX, pos.y - joystickY) < joystickRadius * 1.8) {
+            // Activar joystick si tocan cerca
+            if (Math.hypot(pos.x - joystickX, pos.y - joystickY) < joystickRadius * 1.6) {
                 joystickActive = true;
             }
         });
@@ -170,7 +171,7 @@
             joystickActive = false;
         });
 
-        // Botón de disparo
+        // Botón disparo
         shootBtn.addEventListener("touchstart", e => {
             e.preventDefault();
             if (!gameOver) shoot();
@@ -188,9 +189,9 @@
             playSound(820, 70, 'square', 0.35);
         }
 
-        // ====================== FUNCIONES DEL JUEGO ======================
+        // ====================== JUEGO ======================
         function createMissile(x, y, speed = 4.5) {
-            missiles.push({ x: x, y: y, width: 18, height: 38, speed: speed });
+            missiles.push({ x, y, width: 18, height: 38, speed });
         }
 
         function createEnemy() {
@@ -214,30 +215,28 @@
 
         function checkCollision(a, b) {
             return !(
-                a.x + a.width < b.x ||
-                b.x + b.width < a.x ||
-                a.y + a.height < b.y ||
-                b.y + b.height < a.y
+                a.x + a.width < b.x || b.x + b.width < a.x ||
+                a.y + a.height < b.y || b.y + b.height < a.y
             );
         }
 
         function drawPlane(x, y, color = "#00ff88") {
             ctx.fillStyle = color;
-            ctx.fillRect(x + 15, y, 30, 35);           // cuerpo
-            ctx.fillRect(x + 25, y - 15, 12, 20);      // cabina
-            ctx.fillRect(x + 5, y + 18, 20, 12);       // ala izq
-            ctx.fillRect(x + 35, y + 18, 20, 12);      // ala der
+            ctx.fillRect(x + 15, y, 30, 35);
+            ctx.fillRect(x + 25, y - 15, 12, 20);
+            ctx.fillRect(x + 5, y + 18, 20, 12);
+            ctx.fillRect(x + 35, y + 18, 20, 12);
             ctx.fillStyle = "#ffff00";
-            ctx.fillRect(x + 27, y + 6, 7, 10);        // ventana
+            ctx.fillRect(x + 27, y + 6, 7, 10);
         }
 
         function drawMissile(x, y) {
             ctx.fillStyle = "#ff2222";
             ctx.fillRect(x + 4, y, 12, 34);
             ctx.fillStyle = "#ffff00";
-            ctx.fillRect(x + 6, y - 10, 8, 14);        // punta
+            ctx.fillRect(x + 6, y - 10, 8, 14);
             ctx.fillStyle = "#ff8800";
-            ctx.fillRect(x + 7, y + 28, 6, 10);        // fuego
+            ctx.fillRect(x + 7, y + 28, 6, 10);
         }
 
         function drawExplosion(exp) {
@@ -252,35 +251,35 @@
         function update() {
             if (gameOver) return;
 
-            // Movimiento teclado
+            // === MOVIMIENTO TECLADO ===
             if (keys["ArrowLeft"] && player.x > 10) player.x -= player.speed;
             if (keys["ArrowRight"] && player.x < canvas.width - player.width - 10) player.x += player.speed;
             if (keys["ArrowUp"] && player.y > 10) player.y -= player.speed;
             if (keys["ArrowDown"] && player.y < canvas.height - player.height - 10) player.y += player.speed;
 
-            // Movimiento joystick táctil
+            // === MOVIMIENTO JOYSTICK TÁCTIL (MEJORADO) ===
             if (joystickActive && isTouching) {
                 const dx = touchX - joystickX;
                 const dy = touchY - joystickY;
                 const dist = Math.hypot(dx, dy);
-                if (dist > 12) {
-                    const speed = player.speed * 0.95;
-                    player.x += (dx / dist) * speed;
-                    player.y += (dy / dist) * speed;
+
+                if (dist > 15) {                    // Umbral más bajo = más sensible
+                    const moveSpeed = player.speed * 1.05;
+                    player.x += (dx / dist) * moveSpeed;
+                    player.y += (dy / dist) * moveSpeed * 0.85; // menos sensible verticalmente
                 }
             }
 
-            // Limitar jugador en pantalla
-            player.x = Math.max(10, Math.min(canvas.width - player.width - 10, player.x));
-            player.y = Math.max(10, Math.min(canvas.height - player.height - 10, player.y));
+            // Limitar jugador dentro de la pantalla
+            player.x = Math.max(15, Math.min(canvas.width - player.width - 15, player.x));
+            player.y = Math.max(20, Math.min(canvas.height - player.height - 20, player.y));
 
-            // Actualizar balas
+            // Actualizar balas, misiles, enemigos...
             for (let i = bullets.length - 1; i >= 0; i--) {
                 bullets[i].y -= bullets[i].speed;
                 if (bullets[i].y < -30) bullets.splice(i, 1);
             }
 
-            // Actualizar misiles
             for (let i = missiles.length - 1; i >= 0; i--) {
                 missiles[i].y += missiles[i].speed;
 
@@ -292,28 +291,24 @@
                     if (lives <= 0) endGame();
                     continue;
                 }
-                if (missiles[i].y > canvas.height) missiles.splice(i, 1);
+                if (missiles[i].y > canvas.height + 50) missiles.splice(i, 1);
             }
 
-            // Actualizar enemigos
             for (let i = enemies.length - 1; i >= 0; i--) {
                 const e = enemies[i];
                 e.x += e.speed * e.direction;
                 e.shootTimer--;
 
                 if (e.shootTimer <= 0) {
-                    createMissile(e.x + e.width/2 - 8, e.y + e.height, 4 + difficulty * 0.6);
-                    e.shootTimer = 50 + Math.random() * 70;
+                    createMissile(e.x + e.width/2 - 8, e.y + e.height, 4.2 + difficulty * 0.6);
+                    e.shootTimer = 45 + Math.random() * 65;
                 }
-
                 if (e.x < -80 || e.x > canvas.width + 80) enemies.splice(i, 1);
             }
 
-            // Colisiones bala con misiles y enemigos
+            // Colisiones
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const b = bullets[i];
-
-                // vs misiles
                 for (let j = missiles.length - 1; j >= 0; j--) {
                     if (checkCollision(b, missiles[j])) {
                         createExplosion(missiles[j].x + 9, missiles[j].y + 18);
@@ -326,10 +321,9 @@
                 }
                 if (i < 0) continue;
 
-                // vs aviones enemigos
                 for (let j = enemies.length - 1; j >= 0; j--) {
                     if (checkCollision(b, enemies[j])) {
-                        createExplosion(enemies[j].x + enemies[j].width/2, enemies[j].y + 20, 1.3);
+                        createExplosion(enemies[j].x + 27, enemies[j].y + 20, 1.3);
                         bullets.splice(i, 1);
                         enemies.splice(j, 1);
                         score += 30;
@@ -339,18 +333,16 @@
                 }
             }
 
-            // Explosiones
             for (let i = explosions.length - 1; i >= 0; i--) {
                 explosions[i].life--;
                 if (explosions[i].life <= 0) explosions.splice(i, 1);
             }
 
-            // Dificultad progresiva
             difficulty = 1 + Math.floor(score / 200) * 0.35;
 
-            // Generar enemigos y misiles
-            if (Math.random() < 0.022 + difficulty * 0.012) createEnemy();
-            if (Math.random() < 0.038 + difficulty * 0.018) {
+            // Generación
+            if (Math.random() < 0.023 + difficulty * 0.013) createEnemy();
+            if (Math.random() < 0.04 + difficulty * 0.02) {
                 createMissile(Math.random() * (canvas.width - 40), -40, 3.8 + difficulty);
             }
         }
@@ -362,12 +354,9 @@
             // Estrellas
             ctx.fillStyle = "#ffffff";
             for (let i = 0; i < 45; i++) {
-                const x = (i * 67) % canvas.width;
-                const y = (i * 41) % 380;
-                ctx.fillRect(x, y, 1.5, 1.5);
+                ctx.fillRect((i*67)%canvas.width, (i*41)%380, 1.5, 1.5);
             }
 
-            // Dibujar elementos
             drawPlane(player.x, player.y, "#00ff88");
             bullets.forEach(b => {
                 ctx.fillStyle = "#00ffff";
@@ -375,13 +364,12 @@
             });
             missiles.forEach(m => drawMissile(m.x, m.y));
             enemies.forEach(e => drawPlane(e.x, e.y, "#ff5555"));
-
             explosions.forEach(drawExplosion);
 
-            // Joystick virtual
+            // Joystick
             if (joystickActive) {
-                ctx.strokeStyle = "rgba(255,255,255,0.25)";
-                ctx.lineWidth = 10;
+                ctx.strokeStyle = "rgba(255,255,255,0.3)";
+                ctx.lineWidth = 12;
                 ctx.beginPath();
                 ctx.arc(joystickX, joystickY, joystickRadius, 0, Math.PI * 2);
                 ctx.stroke();
@@ -393,9 +381,9 @@
                 const stickX = joystickX + Math.cos(angle) * dist;
                 const stickY = joystickY + Math.sin(angle) * dist;
 
-                ctx.fillStyle = "rgba(255,255,255,0.55)";
+                ctx.fillStyle = "rgba(255,255,255,0.6)";
                 ctx.beginPath();
-                ctx.arc(stickX, stickY, 28, 0, Math.PI * 2);
+                ctx.arc(stickX, stickY, 30, 0, Math.PI * 2);
                 ctx.fill();
             }
         }
@@ -423,7 +411,7 @@
             livesEl.textContent = "3";
         }
 
-        // Iniciar juego
+        // Iniciar
         resetGame();
         gameLoop();
 
