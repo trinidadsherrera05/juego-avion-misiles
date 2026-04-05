@@ -27,7 +27,6 @@
             color: lime;
             font-size: 22px;
             z-index: 10;
-            pointer-events: none;
             text-shadow: 0 0 5px black;
         }
         #gameOver {
@@ -44,18 +43,17 @@
         }
         .touch-btn {
             position: absolute;
-            background: rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.2);
             color: white;
             font-size: 32px;
-            width: 80px;
-            height: 80px;
+            width: 85px;
+            height: 85px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 15;
-            user-select: none;
-            box-shadow: 0 0 15px rgba(255,255,255,0.3);
+            box-shadow: 0 0 20px rgba(255,255,255,0.4);
         }
     </style>
 </head>
@@ -70,11 +68,10 @@
     <div id="gameOver">
         GAME OVER<br>
         <span style="font-size:36px">Puntaje final: <span id="finalScore">0</span></span><br><br>
-        Toca R para jugar de nuevo o K
+        Toca la pantalla para jugar de nuevo
     </div>
 
-    <!-- Botón de disparo -->
-    <div id="shootBtn" class="touch-btn" style="bottom: 40px; right: 30px;">🔫</div>
+    <div id="shootBtn" class="touch-btn" style="bottom: 35px; right: 25px;">🔫</div>
 
     <script>
         const canvas = document.getElementById("canvas");
@@ -86,26 +83,19 @@
         const finalScoreEl = document.getElementById("finalScore");
         const shootBtn = document.getElementById("shootBtn");
 
-        let score = 0;
-        let lives = 3;
-        let gameOver = false;
-        let difficulty = 1;
+        let score = 0, lives = 3, gameOver = false, difficulty = 1;
 
-        const player = { x: 370, y: 480, width: 60, height: 50, speed: 7 };
+        const player = { x: 370, y: 480, width: 60, height: 50, speed: 8 };
 
-        let bullets = [];
-        let missiles = [];
-        let enemies = [];
-        let explosions = [];
-        let keys = {};
+        let bullets = [], missiles = [], enemies = [], explosions = [], keys = {};
 
-        // Joystick táctil
+        // Joystick mejorado
         let isTouching = false;
         let touchX = 0, touchY = 0;
         let joystickActive = false;
-        const joystickX = 140;
-        const joystickY = 470;
-        const joystickRadius = 75;   // Más grande y fácil de usar
+        const joystickX = 150;
+        const joystickY = 460;
+        const joystickRadius = 85;
 
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
@@ -113,8 +103,7 @@
             try {
                 const osc = audioCtx.createOscillator();
                 const gain = audioCtx.createGain();
-                osc.type = type;
-                osc.frequency.value = freq;
+                osc.type = type; osc.frequency.value = freq;
                 gain.gain.value = volume;
                 osc.connect(gain).connect(audioCtx.destination);
                 osc.start();
@@ -122,8 +111,7 @@
             } catch(e) {}
         }
 
-        // ====================== CONTROLES ======================
-        // Teclado
+        // Controles teclado
         window.addEventListener("keydown", e => {
             keys[e.key] = true;
             if (e.key === " " && !gameOver) shoot();
@@ -131,35 +119,31 @@
         });
         window.addEventListener("keyup", e => keys[e.key] = false);
 
-        // Touch
+        // Controles táctiles
         function getTouchPos(e) {
             const rect = canvas.getBoundingClientRect();
-            const touch = e.touches ? e.touches[0] : e;
+            const t = e.touches ? e.touches[0] : e;
             return {
-                x: (touch.clientX - rect.left) * (canvas.width / rect.width),
-                y: (touch.clientY - rect.top) * (canvas.height / rect.height)
+                x: (t.clientX - rect.left) * (canvas.width / rect.width),
+                y: (t.clientY - rect.top) * (canvas.height / rect.height)
             };
         }
 
         canvas.addEventListener("touchstart", e => {
             e.preventDefault();
-            if (gameOver) {
-                resetGame();
-                return;
-            }
+            if (gameOver) { resetGame(); return; }
+
             const pos = getTouchPos(e);
-            touchX = pos.x;
-            touchY = pos.y;
+            touchX = pos.x; touchY = pos.y;
             isTouching = true;
 
-            // Activar joystick si tocan cerca
-            if (Math.hypot(pos.x - joystickX, pos.y - joystickY) < joystickRadius * 1.6) {
+            if (Math.hypot(pos.x - joystickX, pos.y - joystickY) < joystickRadius * 1.7) {
                 joystickActive = true;
             }
         });
 
         canvas.addEventListener("touchmove", e => {
-            e.preventDefault();
+            e.preventDefault();   // Muy importante
             if (!isTouching || gameOver) return;
             const pos = getTouchPos(e);
             touchX = pos.x;
@@ -172,24 +156,15 @@
         });
 
         // Botón disparo
-        shootBtn.addEventListener("touchstart", e => {
-            e.preventDefault();
-            if (!gameOver) shoot();
-        });
+        shootBtn.addEventListener("touchstart", e => { e.preventDefault(); if (!gameOver) shoot(); });
         shootBtn.addEventListener("mousedown", () => { if (!gameOver) shoot(); });
 
         function shoot() {
-            bullets.push({
-                x: player.x + player.width/2 - 4,
-                y: player.y - 10,
-                width: 8,
-                height: 25,
-                speed: 13
-            });
+            bullets.push({ x: player.x + 28, y: player.y - 10, width: 8, height: 25, speed: 13 });
             playSound(820, 70, 'square', 0.35);
         }
 
-        // ====================== JUEGO ======================
+        // ====================== RESTO DEL JUEGO ======================
         function createMissile(x, y, speed = 4.5) {
             missiles.push({ x, y, width: 18, height: 38, speed });
         }
@@ -197,11 +172,10 @@
         function createEnemy() {
             const fromLeft = Math.random() < 0.5;
             enemies.push({
-                x: fromLeft ? -50 : canvas.width + 50,
+                x: fromLeft ? -60 : canvas.width + 60,
                 y: 60 + Math.random() * 180,
-                width: 55,
-                height: 40,
-                speed: 2.8 + Math.random() * 1.8,
+                width: 55, height: 40,
+                speed: 2.8 + Math.random() * 2,
                 direction: fromLeft ? 1 : -1,
                 shootTimer: 40 + Math.random() * 60
             });
@@ -214,36 +188,33 @@
         }
 
         function checkCollision(a, b) {
-            return !(
-                a.x + a.width < b.x || b.x + b.width < a.x ||
-                a.y + a.height < b.y || b.y + b.height < a.y
-            );
+            return !(a.x + a.width < b.x || b.x + b.width < a.x || a.y + a.height < b.y || b.y + b.height < a.y);
         }
 
         function drawPlane(x, y, color = "#00ff88") {
             ctx.fillStyle = color;
-            ctx.fillRect(x + 15, y, 30, 35);
-            ctx.fillRect(x + 25, y - 15, 12, 20);
-            ctx.fillRect(x + 5, y + 18, 20, 12);
-            ctx.fillRect(x + 35, y + 18, 20, 12);
+            ctx.fillRect(x+15, y, 30, 35);
+            ctx.fillRect(x+25, y-15, 12, 20);
+            ctx.fillRect(x+5, y+18, 20, 12);
+            ctx.fillRect(x+35, y+18, 20, 12);
             ctx.fillStyle = "#ffff00";
-            ctx.fillRect(x + 27, y + 6, 7, 10);
+            ctx.fillRect(x+27, y+6, 7, 10);
         }
 
         function drawMissile(x, y) {
             ctx.fillStyle = "#ff2222";
-            ctx.fillRect(x + 4, y, 12, 34);
+            ctx.fillRect(x+4, y, 12, 34);
             ctx.fillStyle = "#ffff00";
-            ctx.fillRect(x + 6, y - 10, 8, 14);
+            ctx.fillRect(x+6, y-10, 8, 14);
             ctx.fillStyle = "#ff8800";
-            ctx.fillRect(x + 7, y + 28, 6, 10);
+            ctx.fillRect(x+7, y+28, 6, 10);
         }
 
         function drawExplosion(exp) {
             const alpha = exp.life / 28;
             ctx.globalAlpha = alpha * 0.9;
-            const s = exp.size * (25 + Math.sin(exp.life * 0.8) * 12);
-            ctx.fillStyle = `hsl(30, 100%, 65%)`;
+            const s = exp.size * (28 + Math.sin(exp.life*0.8)*12);
+            ctx.fillStyle = `hsl(25, 100%, 60%)`;
             ctx.fillRect(exp.x - s/2, exp.y - s/2, s, s);
             ctx.globalAlpha = 1;
         }
@@ -251,30 +222,30 @@
         function update() {
             if (gameOver) return;
 
-            // === MOVIMIENTO TECLADO ===
-            if (keys["ArrowLeft"] && player.x > 10) player.x -= player.speed;
-            if (keys["ArrowRight"] && player.x < canvas.width - player.width - 10) player.x += player.speed;
-            if (keys["ArrowUp"] && player.y > 10) player.y -= player.speed;
-            if (keys["ArrowDown"] && player.y < canvas.height - player.height - 10) player.y += player.speed;
+            // Teclado
+            if (keys["ArrowLeft"]) player.x -= player.speed;
+            if (keys["ArrowRight"]) player.x += player.speed;
+            if (keys["ArrowUp"]) player.y -= player.speed;
+            if (keys["ArrowDown"]) player.y += player.speed;
 
-            // === MOVIMIENTO JOYSTICK TÁCTIL (MEJORADO) ===
+            // Joystick táctil - Versión más sensible
             if (joystickActive && isTouching) {
-                const dx = touchX - joystickX;
-                const dy = touchY - joystickY;
-                const dist = Math.hypot(dx, dy);
+                let dx = touchX - joystickX;
+                let dy = touchY - joystickY;
+                let dist = Math.hypot(dx, dy);
 
-                if (dist > 15) {                    // Umbral más bajo = más sensible
-                    const moveSpeed = player.speed * 1.05;
-                    player.x += (dx / dist) * moveSpeed;
-                    player.y += (dy / dist) * moveSpeed * 0.85; // menos sensible verticalmente
+                if (dist > 20) {
+                    let moveSpeed = player.speed * 1.1;
+                    player.x += (dx / dist) * moveSpeed * 1.15;   // más fuerza horizontal
+                    player.y += (dy / dist) * moveSpeed * 0.9;
                 }
             }
 
-            // Limitar jugador dentro de la pantalla
+            // Limitar jugador
             player.x = Math.max(15, Math.min(canvas.width - player.width - 15, player.x));
             player.y = Math.max(20, Math.min(canvas.height - player.height - 20, player.y));
 
-            // Actualizar balas, misiles, enemigos...
+            // Actualizar balas, misiles, etc. (mismo código que antes)
             for (let i = bullets.length - 1; i >= 0; i--) {
                 bullets[i].y -= bullets[i].speed;
                 if (bullets[i].y < -30) bullets.splice(i, 1);
@@ -282,10 +253,8 @@
 
             for (let i = missiles.length - 1; i >= 0; i--) {
                 missiles[i].y += missiles[i].speed;
-
                 if (checkCollision(player, missiles[i])) {
-                    lives--;
-                    livesEl.textContent = lives;
+                    lives--; livesEl.textContent = lives;
                     createExplosion(player.x + 30, player.y + 25, 1.6);
                     missiles.splice(i, 1);
                     if (lives <= 0) endGame();
@@ -298,51 +267,43 @@
                 const e = enemies[i];
                 e.x += e.speed * e.direction;
                 e.shootTimer--;
-
                 if (e.shootTimer <= 0) {
-                    createMissile(e.x + e.width/2 - 8, e.y + e.height, 4.2 + difficulty * 0.6);
+                    createMissile(e.x + 23, e.y + e.height, 4.2 + difficulty * 0.6);
                     e.shootTimer = 45 + Math.random() * 65;
                 }
                 if (e.x < -80 || e.x > canvas.width + 80) enemies.splice(i, 1);
             }
 
-            // Colisiones
+            // Colisiones bala
             for (let i = bullets.length - 1; i >= 0; i--) {
                 const b = bullets[i];
                 for (let j = missiles.length - 1; j >= 0; j--) {
                     if (checkCollision(b, missiles[j])) {
                         createExplosion(missiles[j].x + 9, missiles[j].y + 18);
-                        bullets.splice(i, 1);
-                        missiles.splice(j, 1);
-                        score += 10;
-                        scoreEl.textContent = score;
+                        bullets.splice(i, 1); missiles.splice(j, 1);
+                        score += 10; scoreEl.textContent = score;
                         break;
                     }
                 }
                 if (i < 0) continue;
-
                 for (let j = enemies.length - 1; j >= 0; j--) {
                     if (checkCollision(b, enemies[j])) {
                         createExplosion(enemies[j].x + 27, enemies[j].y + 20, 1.3);
-                        bullets.splice(i, 1);
-                        enemies.splice(j, 1);
-                        score += 30;
-                        scoreEl.textContent = score;
+                        bullets.splice(i, 1); enemies.splice(j, 1);
+                        score += 30; scoreEl.textContent = score;
                         break;
                     }
                 }
             }
 
             for (let i = explosions.length - 1; i >= 0; i--) {
-                explosions[i].life--;
-                if (explosions[i].life <= 0) explosions.splice(i, 1);
+                if (--explosions[i].life <= 0) explosions.splice(i, 1);
             }
 
             difficulty = 1 + Math.floor(score / 200) * 0.35;
 
-            // Generación
-            if (Math.random() < 0.023 + difficulty * 0.013) createEnemy();
-            if (Math.random() < 0.04 + difficulty * 0.02) {
+            if (Math.random() < 0.025 + difficulty * 0.013) createEnemy();
+            if (Math.random() < 0.042 + difficulty * 0.02) {
                 createMissile(Math.random() * (canvas.width - 40), -40, 3.8 + difficulty);
             }
         }
@@ -351,39 +312,35 @@
             ctx.fillStyle = "#001122";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-            // Estrellas
             ctx.fillStyle = "#ffffff";
             for (let i = 0; i < 45; i++) {
-                ctx.fillRect((i*67)%canvas.width, (i*41)%380, 1.5, 1.5);
+                ctx.fillRect((i*67)%800, (i*41)%380, 1.5, 1.5);
             }
 
             drawPlane(player.x, player.y, "#00ff88");
-            bullets.forEach(b => {
-                ctx.fillStyle = "#00ffff";
-                ctx.fillRect(b.x, b.y, b.width, b.height);
-            });
+            bullets.forEach(b => { ctx.fillStyle = "#00ffff"; ctx.fillRect(b.x, b.y, b.width, b.height); });
             missiles.forEach(m => drawMissile(m.x, m.y));
             enemies.forEach(e => drawPlane(e.x, e.y, "#ff5555"));
             explosions.forEach(drawExplosion);
 
-            // Joystick
+            // Joystick visual
             if (joystickActive) {
-                ctx.strokeStyle = "rgba(255,255,255,0.3)";
-                ctx.lineWidth = 12;
+                ctx.strokeStyle = "rgba(0,255,100,0.4)";
+                ctx.lineWidth = 14;
                 ctx.beginPath();
-                ctx.arc(joystickX, joystickY, joystickRadius, 0, Math.PI * 2);
+                ctx.arc(joystickX, joystickY, joystickRadius, 0, Math.PI*2);
                 ctx.stroke();
 
                 const dx = touchX - joystickX;
                 const dy = touchY - joystickY;
                 const dist = Math.min(Math.hypot(dx, dy), joystickRadius);
                 const angle = Math.atan2(dy, dx);
-                const stickX = joystickX + Math.cos(angle) * dist;
-                const stickY = joystickY + Math.sin(angle) * dist;
+                const sx = joystickX + Math.cos(angle) * dist;
+                const sy = joystickY + Math.sin(angle) * dist;
 
-                ctx.fillStyle = "rgba(255,255,255,0.6)";
+                ctx.fillStyle = "rgba(0,255,100,0.7)";
                 ctx.beginPath();
-                ctx.arc(stickX, stickY, 30, 0, Math.PI * 2);
+                ctx.arc(sx, sy, 32, 0, Math.PI*2);
                 ctx.fill();
             }
         }
@@ -396,30 +353,23 @@
         }
 
         function resetGame() {
-            score = 0;
-            lives = 3;
-            difficulty = 1;
-            bullets = [];
-            missiles = [];
-            enemies = [];
-            explosions = [];
-            player.x = 370;
-            player.y = 480;
+            score = 0; lives = 3; difficulty = 1;
+            bullets = []; missiles = []; enemies = []; explosions = [];
+            player.x = 370; player.y = 480;
             gameOver = false;
             gameOverScreen.style.display = "none";
             scoreEl.textContent = "0";
             livesEl.textContent = "3";
         }
 
-        // Iniciar
-        resetGame();
-        gameLoop();
-
         function gameLoop() {
             update();
             draw();
             requestAnimationFrame(gameLoop);
         }
+
+        resetGame();
+        gameLoop();
     </script>
 </body>
 </html>
